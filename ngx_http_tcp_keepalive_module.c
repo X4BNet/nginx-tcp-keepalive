@@ -35,14 +35,22 @@ ngx_http_tcp_keepalive_handler(ngx_http_request_t *r)
 		return NGX_HTTP_INTERNAL_SERVER_ERROR;			\
 	}								\
 })
-	SSO(SOL_SOCKET, SO_KEEPALIVE, conf->enable);
+
+	if(conf->enable != r->connection->keepalive_enabled) {
+		SSO(SOL_SOCKET, SO_KEEPALIVE, conf->enable);
+		r->connection->keepalive_enabled = conf->enable;
+
+		if(conf->enable) {
 #ifdef NGX_DARWIN
-	SSO(IPPROTO_TCP, TCP_KEEPALIVE, conf->tcp_keepidle);
+			SSO(IPPROTO_TCP, TCP_KEEPALIVE, conf->tcp_keepidle);
 #else
-	SSO(IPPROTO_TCP, TCP_KEEPCNT, conf->tcp_keepcnt);
-	SSO(IPPROTO_TCP, TCP_KEEPIDLE, conf->tcp_keepidle);
-	SSO(IPPROTO_TCP, TCP_KEEPINTVL, conf->tcp_keepintvl);
+			SSO(IPPROTO_TCP, TCP_KEEPCNT, conf->tcp_keepcnt);
+			SSO(IPPROTO_TCP, TCP_KEEPIDLE, conf->tcp_keepidle);
+			SSO(IPPROTO_TCP, TCP_KEEPINTVL, conf->tcp_keepintvl);
 #endif
+
+		}
+	}
 #undef SSO
 
 	return NGX_DECLINED;
